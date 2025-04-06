@@ -26,6 +26,53 @@ def insertTypeBook():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@typeBook_bp.route('/updateBook', methods=['POST'])
+def updateTypeBook():
+    try:
+        data = request.get_json()  # Nhận JSON từ Flutter
+        importData(
+            sql="""UPDATE `type_books` SET 
+            `name_book`=%s,
+            `type_book`=%s,
+            `image`=%s,
+            `description`=%s,
+            `updated_at`=NOW() 
+            WHERE `id`= %s """,
+            val=(
+                data["name_book"], data["type_book"], data["image"], data["description"] , data["id"]
+            )
+        )
+
+        # Trả phản hồi về Flutter
+        return jsonify({"message": "Cập nhật thành công!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@typeBook_bp.route('/deleteBook', methods=['POST'])
+def deleteTypeBook():
+    try:
+        data = request.get_json()  # Nhận JSON từ Flutter
+        importData(
+            sql="""DELETE FROM `type_books` WHERE `id` = %s """,
+            val=(data["id"],)
+        )
+
+        # Trả phản hồi về Flutter
+        return jsonify({"message": "Xoá thành công!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@typeBook_bp.route("/exportBook" , methods=['POST'])
+def exportTypeBook():
+
+    list = exportData(
+        sql="SELECT * FROM `type_books` WHERE 1",
+        val=(),
+        fetch_all=True
+    )
+
+    return jsonify(list), 200
+
 
 @typeBook_bp.route('/upload_image_book', methods=['POST'])
 def uploadImageBook():
@@ -50,4 +97,13 @@ def uploadImageBook():
     text_output = scans(image_path)
 
     # Trả về đường dẫn ảnh hợp lệ
-    return jsonify({"message": "Upload successful", "file_path": f"/{image_path}", "label": text_output["label"], "number": text_output["number"]} ), 200
+    return jsonify({
+        "message": "Upload successful",
+        "file_path": f"/{image_path}",
+        "label": text_output["label"],
+        "number": text_output["number"]}
+    ), 200
+
+@typeBook_bp.route('/public/image/<path:filename>')
+def serve_image(filename):
+    return send_from_directory("public/image", filename)

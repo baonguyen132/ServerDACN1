@@ -17,8 +17,6 @@ def importData(sql,val):
     mycursor.execute(sql, val)
     db.commit()
 
-def exportData(sql, val):
-    mycursor.execute(sql , val)
-    output = (mycursor.fetchone())
-
-    return output
+def exportData(sql, val, fetch_all=False):
+    mycursor.execute(sql, val)
+    return mycursor.fetchall() if fetch_all else mycursor.fetchone()

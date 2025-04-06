@@ -44,7 +44,7 @@ def recognize_text(image_path):
 def scans(file_path):
     output_folder = os.path.join(AI_FOLDER, 'scan')
     cropped_folder = os.path.join(AI_FOLDER, 'cropped')
-    model = YOLO('D:/VKU/3/DACN1/SeverDACN1/AI/model_label_number.pt')
+    model = YOLO('D:/VKU/3/DACN1/ServerDACN1/AI/model_label_number.pt')
     results = model.predict(source=file_path, save=True)
 
     if results and results[0].boxes is not None and len(results[0].boxes.xyxy) > 0:

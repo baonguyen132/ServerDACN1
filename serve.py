@@ -34,6 +34,7 @@ def login_user():
     except Exception as e:
         print(e)
         return jsonify({"error": str(e)}), 400
+
 @app.route('/register', methods=['POST'])
 def register_user():
     try:
