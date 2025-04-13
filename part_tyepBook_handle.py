@@ -7,17 +7,17 @@ from connectDatabase import importData, exportData
 
 typeBook_bp = Blueprint('type_book', __name__)
 
-@typeBook_bp.route('/insertBook', methods=['POST'])
+@typeBook_bp.route('/insertTypeBook', methods=['POST'])
 def insertTypeBook():
     try:
         data = request.get_json()  # Nhận JSON từ Flutter
         print(data)
         importData(
             sql="""INSERT INTO `type_books`
-                    (`name_book`, `type_book`, `image`, `description`, `created_at`, `updated_at`)
-                    VALUES (%s, %s, %s, %s, NOW(), NOW())""",
+                    (`name_book`, `type_book`, `price` ,`image`, `description`, `created_at`, `updated_at`)
+                    VALUES (%s, %s ,%s, %s, %s, NOW(), NOW())""",
             val=(
-                data["name_book"], data["type_book"], data["image"], data["description"]
+                data["name_book"], data["type_book"], data["price"] ,data["image"], data["description"]
             )
         )
 
@@ -26,7 +26,7 @@ def insertTypeBook():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@typeBook_bp.route('/updateBook', methods=['POST'])
+@typeBook_bp.route('/updateTypeBook', methods=['POST'])
 def updateTypeBook():
     try:
         data = request.get_json()  # Nhận JSON từ Flutter
@@ -34,12 +34,13 @@ def updateTypeBook():
             sql="""UPDATE `type_books` SET 
             `name_book`=%s,
             `type_book`=%s,
+            `price` = %s ,
             `image`=%s,
             `description`=%s,
             `updated_at`=NOW() 
             WHERE `id`= %s """,
             val=(
-                data["name_book"], data["type_book"], data["image"], data["description"] , data["id"]
+                data["name_book"], data["type_book"], data["price"] ,data["image"], data["description"] , data["id"]
             )
         )
 
@@ -48,7 +49,7 @@ def updateTypeBook():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@typeBook_bp.route('/deleteBook', methods=['POST'])
+@typeBook_bp.route('/deleteTypeBook', methods=['POST'])
 def deleteTypeBook():
     try:
         data = request.get_json()  # Nhận JSON từ Flutter
@@ -62,7 +63,7 @@ def deleteTypeBook():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@typeBook_bp.route("/exportBook" , methods=['POST'])
+@typeBook_bp.route("/exportTypeBook" , methods=['POST'])
 def exportTypeBook():
 
     list = exportData(
@@ -74,7 +75,7 @@ def exportTypeBook():
     return jsonify(list), 200
 
 
-@typeBook_bp.route('/upload_image_book', methods=['POST'])
+@typeBook_bp.route('/upload_type_image_book', methods=['POST'])
 def uploadImageBook():
     UPLOAD_FOLDER = 'public/image/'
     # Tạo thư mục nếu chưa có

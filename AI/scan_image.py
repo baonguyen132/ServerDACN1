@@ -66,28 +66,33 @@ def scans(file_path):
         for i, (box, cls) in enumerate(zip(results[0].boxes.xyxy, results[0].boxes.cls)):
             x1, y1, x2, y2 = map(int, box)
             cropped_image = image.crop((x1, y1, x2, y2))
-            class_name = model.names[int(cls)]
+            class_name = model.names[int(cls)].lower()
 
-            if class_name.lower() == "label":
+            # Nếu là 'title' → OCR
+            if class_name == "title":
                 class_folder = os.path.join(cropped_folder, "label")
-            elif class_name.lower() == "number":
-                class_folder = os.path.join(cropped_folder, "number")
+                os.makedirs(class_folder, exist_ok=True)
+                cropped_image_path = os.path.join(class_folder, f"image_{i}{file_ext}")
+                cropped_image.save(cropped_image_path)
+                cropped_paths.append(cropped_image_path)
+
+                # Trắng đen
+                bw_img = convert_to_black_white(cropped_image_path)
+                bw_img_path = os.path.join(class_folder, f"bw_{i}{file_ext}")
+                cv2.imwrite(bw_img_path, bw_img)
+
+                # Nhận diện chữ
+                text_results["label"] = recognize_text(bw_img_path)
+
+            # Nếu là số từ 1 → 12 → không OCR, chỉ gán key "text"
+            elif class_name.isdigit() and 1 <= int(class_name) <= 12:
+                text_results["number"] = class_name
+
             else:
+                # Các nhãn khác → bỏ qua
                 continue
 
-            os.makedirs(class_folder, exist_ok=True)
-            cropped_image_path = os.path.join(class_folder, f"image_{i}{file_ext}")
-            cropped_image.save(cropped_image_path)
-            cropped_paths.append(cropped_image_path)
-
-            # Chuyển ảnh về trắng đen trước khi nhận diện
-            bw_img = convert_to_black_white(cropped_image_path)
-            bw_img_path = os.path.join(class_folder, f"bw_{i}{file_ext}")
-            cv2.imwrite(bw_img_path, bw_img)
-
-            # Nhận diện chữ
-            text_results[class_name] = recognize_text(bw_img_path)
-
         shutil.rmtree("./runs")
-        return text_results  # Trả về nội dung nhận diện
+        return text_results
+
     return False
