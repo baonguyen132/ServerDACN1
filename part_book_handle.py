@@ -44,15 +44,56 @@ def upload_book():
     # Trả về đường dẫn ảnh hợp lệ
     return jsonify({
         "message": "Upload successful",
-        "data": book
+        "data": book,
+        "path": image_path
     }), 200
 @book_bp.route('/insertBook', methods=['POST'])
 def insertBook():
     try:
         data = request.get_json()  # Nhận JSON từ Flutter
-        print(data)
+        importData(
+            sql="""
+            INSERT INTO `book`(`date_purchase`, `price`, `description`, `status`, `image`, `id_user`, `id_type_book`, `created_at`, `updated_at`) 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())""",
+            val=(
+                data["date_purchase"],
+                data["price"],
+                data["description"],
+                data["status"],
+                data["image"],
+                data["id_user"],
+                data["id_type_book"]
+            )
+        )
 
         # Trả phản hồi về Flutter
         return jsonify({"message": "Thêm sách thành công!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+@book_bp.route("/exportMyBook" , methods=['POST'])
+def exportTypeBook():
+    data = request.get_json()
+
+    list = exportData(
+        sql="""SELECT  
+        book.id, 
+        type_books.name_book, 
+        type_books.type_book, 
+        book.date_purchase, 
+        book.price, 
+        book.description, 
+        book.image ,
+        book.id_user,
+        book.id_type_book
+        FROM book JOIN type_books ON book.id_type_book = type_books.id 
+        WHERE book.id_user = %s""",
+        val=(data["id_user"],),
+        fetch_all=True
+    )
+
+    return jsonify(list), 200
+
+@book_bp.route('/public/image_book_client/<path:filename>')
+def serve_image(filename):
+    return send_from_directory("public/image_book_client", filename)

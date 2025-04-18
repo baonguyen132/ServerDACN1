@@ -10,22 +10,31 @@ from PIL import Image
 AI_FOLDER = "AI"
 os.makedirs(AI_FOLDER, exist_ok=True)
 
-def convert_to_black_white(image_path):
-    """Chuyển ảnh về trắng đen (nhị phân) với Otsu's Thresholding."""
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)  # Chuyển sang ảnh xám
-
-    if img is None:
-        print(f"Lỗi: Không thể đọc ảnh {image_path}")
-        return None
-
-    # Làm mờ ảnh để giảm nhiễu trước khi nhị phân hóa
-    blurred = cv2.GaussianBlur(img, (3, 3), 0)
-
-    # Áp dụng nhị phân với Otsu's thresholding
-    _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    return binary
-
+# def convert_text_image_to_black_white(image_path):
+#     """Chuyển ảnh có chữ về ảnh trắng đen: chữ trắng, nền đen."""
+#     img = cv2.imread(image_path)
+#
+#     if img is None:
+#         print(f"Lỗi: Không thể đọc ảnh {image_path}")
+#         return None
+#
+#     # Chuyển sang ảnh xám
+#     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#
+#     # Làm mờ để giảm nhiễu
+#     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+#
+#     # Dùng Otsu's Threshold để nhị phân hóa ảnh
+#     _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+#
+#     # Đảo màu nếu chữ đang là đen trên nền trắng
+#     white_pixels = cv2.countNonZero(binary)
+#     black_pixels = binary.size - white_pixels
+#
+#     if white_pixels > black_pixels:
+#         binary = cv2.bitwise_not(binary)
+#
+#     return binary
 
 def recognize_text(image_path):
     """Nhận diện văn bản từ ảnh."""
@@ -76,13 +85,8 @@ def scans(file_path):
                 cropped_image.save(cropped_image_path)
                 cropped_paths.append(cropped_image_path)
 
-                # Trắng đen
-                bw_img = convert_to_black_white(cropped_image_path)
-                bw_img_path = os.path.join(class_folder, f"bw_{i}{file_ext}")
-                cv2.imwrite(bw_img_path, bw_img)
-
                 # Nhận diện chữ
-                text_results["label"] = recognize_text(bw_img_path)
+                text_results["label"] = recognize_text(cropped_image_path)
 
             # Nếu là số từ 1 → 12 → không OCR, chỉ gán key "text"
             elif class_name.isdigit() and 1 <= int(class_name) <= 12:

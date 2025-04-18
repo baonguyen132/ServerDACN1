@@ -59,6 +59,23 @@ def register_user():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route('/loadUser', methods=['POST'])
+def loadUser():
+    try:
+        data = request.get_json()  # Nhận JSON từ Flutter
+
+        user = exportData(
+            sql="SELECT * FROM users WHERE id = %s",
+            val=(data["id_user"],),
+        )
+
+        return jsonify(user), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 400
+
+
 @app.route('/sendOtp', methods=['POST'])
 def send_otp():
     try:
