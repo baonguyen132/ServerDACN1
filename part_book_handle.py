@@ -53,13 +53,14 @@ def insertBook():
         data = request.get_json()  # Nhận JSON từ Flutter
         importData(
             sql="""
-            INSERT INTO `book`(`date_purchase`, `price`, `description`, `status`, `image`, `id_user`, `id_type_book`, `created_at`, `updated_at`) 
-            VALUES (%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())""",
+            INSERT INTO `book`(`date_purchase`, `price`, `description`, `status`, `quantity` ,`image`, `id_user`, `id_type_book`, `created_at`, `updated_at`) 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())""",
             val=(
                 data["date_purchase"],
                 data["price"],
                 data["description"],
                 data["status"],
+                data["quantity"],
                 data["image"],
                 data["id_user"],
                 data["id_type_book"]
@@ -72,7 +73,7 @@ def insertBook():
         return jsonify({"error": str(e)}), 400
 
 @book_bp.route("/exportMyBook" , methods=['POST'])
-def exportTypeBook():
+def exportMyBook():
     data = request.get_json()
 
     list = exportData(
@@ -85,7 +86,9 @@ def exportTypeBook():
         book.description, 
         book.image ,
         book.id_user,
-        book.id_type_book
+        book.id_type_book,
+        book.status,
+        book.quantity
         FROM book JOIN type_books ON book.id_type_book = type_books.id 
         WHERE book.id_user = %s""",
         val=(data["id_user"],),
@@ -93,6 +96,76 @@ def exportTypeBook():
     )
 
     return jsonify(list), 200
+
+@book_bp.route("/exportBook", methods=['GET'])
+def exportBook():
+    books = exportData(
+        sql="""
+            SELECT  
+                book.id, 
+                type_books.name_book, 
+                type_books.type_book, 
+                book.date_purchase, 
+                book.price, 
+                book.description, 
+                book.image,
+                book.id_user,
+                book.id_type_book,
+                book.status,
+                book.quantity
+            FROM book 
+            JOIN type_books ON book.id_type_book = type_books.id
+            WHERE book.status = 1 AND book.quantity > 0
+        """,
+        val=(),
+        fetch_all=True
+    )
+
+    return jsonify(books), 200
+
+
+@book_bp.route('/deleteBook', methods=['POST'])
+def deleteBook():
+    try:
+        data = request.get_json()  # Nhận JSON từ Flutter
+        importData(
+            sql="""DELETE FROM `book` WHERE `id` = %s """,
+            val=(data["id"],)
+        )
+
+        if os.path.exists(data["image"]):
+            os.remove(data["image"])
+            print("Đã xóa ảnh.")
+        else:
+            print("Ảnh không tồn tại.")
+
+        # Trả phản hồi về Flutter
+        return jsonify({"message": "Xoá thành công!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@book_bp.route('/updateBook', methods=['POST'])
+def updateBook():
+    try:
+        data = request.get_json()  # Nhận JSON từ Flutter
+        importData(
+            sql="""
+            UPDATE `book` SET 
+            `date_purchase`=%s,
+            `price`=%s,
+            `description`=%s,
+            `quantity`=%s,
+            `updated_at`=NOW() 
+            WHERE `id`= %s """,
+            val=(
+                data["date_purchase"], data["price"], data["description"],data["quantity"] ,data["id"]
+            )
+        )
+
+        # Trả phản hồi về Flutter
+        return jsonify({"message": "Cập nhật thành công!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @book_bp.route('/public/image_book_client/<path:filename>')
 def serve_image(filename):
