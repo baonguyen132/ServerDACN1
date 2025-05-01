@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename, send_file
 
 from connectDatabase import importData, exportData
 from part_book_handle import book_bp
+from part_cart_handle import cart
 from sendEmail import sendMail
 
 from part_image_handle import image_bp
@@ -94,5 +95,6 @@ def send_otp():
 app.register_blueprint(image_bp)
 app.register_blueprint(typeBook_bp)
 app.register_blueprint(book_bp)
+app.register_blueprint(cart)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

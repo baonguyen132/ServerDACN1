@@ -47,6 +47,58 @@ def upload_book():
         "data": book,
         "path": image_path
     }), 200
+
+
+@book_bp.route('/scan_books', methods=['POST'])
+def scan_books():
+    UPLOAD_FOLDER = 'public/image_book_client/'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    # Kiểm tra file ảnh
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file found"}), 400
+
+    image = request.files['image']
+
+    if image.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # Đổi tên file an toàn và lưu tạm ảnh
+    filename = secure_filename(image.filename)
+    image_path = os.path.join(UPLOAD_FOLDER, filename)
+    image.save(image_path)
+
+
+    # Xử lý ảnh bằng YOLO
+    text_output = scan_book(image_path)
+
+    # Truy vấn dữ liệu sách dựa trên kết quả AI
+    books = exportData(
+        sql="""
+                SELECT  
+                        book.id, 
+                        type_books.name_book, 
+                        type_books.type_book, 
+                        book.date_purchase, 
+                        book.price, 
+                        book.description, 
+                        book.image,
+                        book.id_user,
+                        book.id_type_book,
+                        book.status,
+                        book.quantity
+                    FROM book 
+                    JOIN type_books ON book.id_type_book = type_books.id
+                    WHERE book.status = 1 AND book.quantity > 0 AND type_books.id = %s
+                """,
+        val=(text_output,),
+        fetch_all=True
+    )
+
+    return jsonify(books), 200
+
+
+
 @book_bp.route('/insertBook', methods=['POST'])
 def insertBook():
     try:
@@ -143,6 +195,7 @@ def deleteBook():
         return jsonify({"message": "Xoá thành công!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 @book_bp.route('/updateBook', methods=['POST'])
 def updateBook():
