@@ -6,9 +6,9 @@ from flask import Blueprint, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from connectDatabase import importData, exportData, importDataGetId
 
-cart = Blueprint('cart', __name__)
+cart_bp = Blueprint('cart', __name__)
 
-@cart.route("/export_cart_purchase", methods=['POST'])
+@cart_bp.route("/export_cart_purchase", methods=['POST'])
 def export_cart_purchase():
     data = request.get_json()
 
@@ -28,7 +28,7 @@ def export_cart_purchase():
     )
     return jsonify(list), 200
 
-@cart.route("/export_cart_seller", methods=['POST'])
+@cart_bp.route("/export_cart_seller", methods=['POST'])
 def export_cart_seller():
     data = request.get_json()
 
@@ -50,32 +50,49 @@ def export_cart_seller():
     return jsonify(list), 200
 
 
-@cart.route("/update_state_cart", methods=['POST'])
+@cart_bp.route("/update_state_cart", methods=['POST'])
 def update_state_cart():
-    data = request.get_json()
-    now = datetime.now()
+    try:
+        data = request.get_json()
+        now = datetime.now()
+        print(data)
 
-    # Execute SQL update query
-    result = importData(
-        sql="""
-        UPDATE `cart` 
-        SET `status` = %s,
-            `updated_at` = %s
-        WHERE `id` = %s
-        """,
-        val=(data["state"], now, data["id_user"])
-    )
+        # Kiểm tra trường dữ liệu bắt buộc
+        required_fields = ["state", "total", "id_user", "id_cart"]
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Thiếu trường dữ liệu cần thiết."}), 400
 
-    return jsonify({"message": "Cart state updated successfully", "result": result})
+        # Cộng điểm nếu đơn hàng đã chuyển
+        if data["state"] == "Đã chuyển":
+            importData(
+                sql="""UPDATE `users` SET `point` = `point` + %s WHERE id = %s""",
+                val=(int(data["total"]), data["id_user"]),
+            )
 
-@cart.route("/export_item_cart", methods=['POST'])
+        # Cập nhật trạng thái đơn hàng
+        result = importData(
+            sql="""
+            UPDATE `cart` 
+            SET `status` = %s,
+                `updated_at` = %s
+            WHERE `id` = %s
+            """,
+            val=(data["state"], now, data["id_cart"])
+        )
+
+        return jsonify({"message": "Cập nhật trạng thái giỏ hàng thành công", "result": result})
+
+    except Exception as e:
+        return jsonify({"error": f"Lỗi xử lý: {str(e)}"}), 500
+
+@cart_bp.route("/export_item_cart", methods=['POST'])
 def export_item_cart():
     data = request.get_json()
 
     list = exportData(
         sql=""
             "SELECT detail_cart.id, detail_cart.quantity, detail_cart.id_book,book.date_purchase, book.price,book.description, book.image,type_books.name_book  FROM `detail_cart` JOIN book ON detail_cart.id_book = book.id JOIN type_books ON book.id_type_book = type_books.id WHERE detail_cart.id_cart = %s ",
-        val=(data["id_cart"],),
+        val=(int(data["id_cart"]),),
         fetch_all=True,
     )
 
@@ -84,7 +101,7 @@ def export_item_cart():
     return jsonify(list), 200
 
 
-@cart.route('/insert_cart', methods=['POST'])
+@cart_bp.route('/insert_cart', methods=['POST'])
 def insertCart():
     data = request.get_json()
     address = data.get("address", "")
@@ -94,6 +111,8 @@ def insertCart():
 
     total_list = [int(t.strip()) for t in total_raw.split('-') if t.strip().isdigit()]
     now = datetime.now()
+
+
 
     try:
         for index, (seller_id, books_json) in enumerate(all_items.items()):
@@ -110,6 +129,11 @@ def insertCart():
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 val=("Đã xác nhận", address, total, id_user, int(seller_id), now, now)
+            )
+
+            importData(
+                sql="""UPDATE `users` SET `point` = `point` - %s WHERE id = %s""",
+                val=(int(total), id_user)
             )
 
             for book_detail_json in books.values():

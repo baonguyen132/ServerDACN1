@@ -68,6 +68,11 @@ def scan_books():
     image_path = os.path.join(UPLOAD_FOLDER, filename)
     image.save(image_path)
 
+    # Lấy thêm trường id từ form-data
+    user_id = request.form.get('id')  # Lưu ý: id là kiểu string, cần ép kiểu nếu cần
+
+    if not user_id:
+        return jsonify({"error": "Missing user id"}), 400
 
     # Xử lý ảnh bằng YOLO
     text_output = scan_book(image_path)
@@ -75,23 +80,23 @@ def scan_books():
     # Truy vấn dữ liệu sách dựa trên kết quả AI
     books = exportData(
         sql="""
-                SELECT  
-                        book.id, 
-                        type_books.name_book, 
-                        type_books.type_book, 
-                        book.date_purchase, 
-                        book.price, 
-                        book.description, 
-                        book.image,
-                        book.id_user,
-                        book.id_type_book,
-                        book.status,
-                        book.quantity
-                    FROM book 
-                    JOIN type_books ON book.id_type_book = type_books.id
-                    WHERE book.status = 1 AND book.quantity > 0 AND type_books.id = %s
-                """,
-        val=(text_output,),
+            SELECT  
+                book.id, 
+                type_books.name_book, 
+                type_books.type_book, 
+                book.date_purchase, 
+                book.price, 
+                book.description, 
+                book.image,
+                book.id_user,
+                book.id_type_book,
+                book.status,
+                book.quantity
+            FROM book 
+            JOIN type_books ON book.id_type_book = type_books.id
+            WHERE book.status = 1 AND book.quantity > 0 AND type_books.id = %s AND book.id_user != %s
+        """,
+        val=(text_output, user_id),
         fetch_all=True
     )
 
@@ -149,8 +154,10 @@ def exportMyBook():
 
     return jsonify(list), 200
 
-@book_bp.route("/exportBook", methods=['GET'])
+@book_bp.route("/exportBook", methods=['POST'])
 def exportBook():
+    data = request.get_json()
+
     books = exportData(
         sql="""
             SELECT  
@@ -167,9 +174,9 @@ def exportBook():
                 book.quantity
             FROM book 
             JOIN type_books ON book.id_type_book = type_books.id
-            WHERE book.status = 1 AND book.quantity > 0
+            WHERE book.status = 1 AND book.quantity > 0 AND book.id_user != %s
         """,
-        val=(),
+        val=(data["id_user"], ),
         fetch_all=True
     )
 
